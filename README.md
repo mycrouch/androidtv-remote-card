@@ -1,5 +1,9 @@
 # Android TV Remote Card
 
+<p align="center">
+  <img src="docs/preview.png" alt="Android TV Remote Card" width="420" />
+</p>
+
 One-card remote control + app launcher for a single Android TV / Google TV connected to Home Assistant via the **androidtv_remote** integration.
 
 - Power, Home, Back, Volume −/+ in a single row
