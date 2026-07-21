@@ -24,7 +24,9 @@ The resource is served at `/hacsfiles/androidtv-remote-card/androidtv-remote-car
 | `entity` | yes      | The TV `media_player` entity                        |
 | `remote` | no       | The `remote.` entity, for nav/volume commands       |
 | `name`   | no       | Card title override                                 |
-| `apps`   | no       | List of `{ name, icon, package }` app shortcuts     |
+| `apps`   | no       | List of `{ name, icon, package, color }` app shortcuts |
+
+Each app's `color` is an optional Home Assistant named palette colour (`red`, `light-blue`, `orange`, `cyan`, `green`, `grey`, …), rendered through the theme's `--rgb-<name>` tokens so it stays consistent with your theme. Omit it for the default icon colour.
 
 ### Example
 
@@ -36,9 +38,11 @@ apps:
   - name: Netflix
     icon: mdi:netflix
     package: com.netflix.ninja
+    color: red
   - name: Plex
     icon: mdi:plex
     package: com.plexapp.android
+    color: orange
 ```
 
 ## License

@@ -15,20 +15,30 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.0.0';
+const ATV_CARD_VERSION = '1.1.0';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. Package names are the real, verified IDs for
-// each app's universal Android TV / Google TV build.
+// each app's universal Android TV / Google TV build. `color` is a Home
+// Assistant named palette colour (red, light-blue, orange, cyan, grey, …),
+// rendered via the theme's --rgb-<name> tokens so it stays theme-consistent.
 const ATV_COMMON_APPS = [
-  { name: 'Netflix', icon: 'mdi:netflix', package: 'com.netflix.ninja' },
-  { name: 'Prime Video', icon: 'mdi:filmstrip', package: 'com.amazon.amazonvideo.livingroom' },
-  { name: 'Plex', icon: 'mdi:plex', package: 'com.plexapp.android' },
-  { name: 'YouTube', icon: 'mdi:youtube', package: 'com.google.android.youtube.tv' },
-  { name: 'Disney+', icon: 'mdi:plus-circle', package: 'com.disney.disneyplus' },
-  { name: 'Apple TV', icon: 'mdi:apple', package: 'com.apple.atve.androidtv.appletv' },
-  { name: 'Spotify', icon: 'mdi:spotify', package: 'com.spotify.tv.android' },
+  { name: 'Netflix', icon: 'mdi:netflix', package: 'com.netflix.ninja', color: 'red' },
+  { name: 'Prime Video', icon: 'mdi:filmstrip', package: 'com.amazon.amazonvideo.livingroom', color: 'light-blue' },
+  { name: 'Plex', icon: 'mdi:plex', package: 'com.plexapp.android', color: 'orange' },
+  { name: 'YouTube', icon: 'mdi:youtube', package: 'com.google.android.youtube.tv', color: 'red' },
+  { name: 'Disney+', icon: 'mdi:plus-circle', package: 'com.disney.disneyplus', color: 'indigo' },
+  { name: 'Apple TV', icon: 'mdi:apple', package: 'com.apple.atve.androidtv.appletv', color: 'grey' },
+  { name: 'Spotify', icon: 'mdi:spotify', package: 'com.spotify.tv.android', color: 'green' },
 ];
+
+// Only allow safe palette-name characters when interpolating into a CSS
+// custom-property name, so a stray config value can't break out of the rule.
+function atvColorStyle(color) {
+  if (!color) return '';
+  const safe = String(color).replace(/[^a-z0-9-]/gi, '');
+  return safe ? ` style="color: rgb(var(--rgb-${safe}))"` : '';
+}
 
 class AndroidTvRemoteCard extends HTMLElement {
   static getConfigElement() {
@@ -87,11 +97,10 @@ class AndroidTvRemoteCard extends HTMLElement {
         :host { display: block; }
         .atv-card { padding: 16px; }
         .atv-header {
-          display: flex; align-items: center; gap: 8px;
-          font-size: 1.2rem; font-weight: 500; margin-bottom: 12px;
+          display: flex; align-items: baseline; gap: 6px;
+          font-size: 20px; font-weight: 500; margin-bottom: 12px;
           color: var(--primary-text-color);
         }
-        .atv-header ha-icon { color: var(--state-icon-color, var(--paper-item-icon-color)); }
         .atv-sub { font-size: 0.85rem; font-weight: 400; color: var(--secondary-text-color); margin-left: 4px; }
         .atv-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
         .atv-btn {
@@ -128,7 +137,6 @@ class AndroidTvRemoteCard extends HTMLElement {
       </style>
       <div class="atv-card">
         <div class="atv-header">
-          <ha-icon icon="mdi:television"></ha-icon>
           <span class="atv-title"></span>
           <span class="atv-sub"></span>
         </div>
@@ -191,7 +199,7 @@ class AndroidTvRemoteCard extends HTMLElement {
       const el = document.createElement('div');
       el.className = 'atv-app';
       el.dataset.package = app.package;
-      el.innerHTML = `<ha-icon icon="${app.icon || 'mdi:application'}"></ha-icon><span>${app.name}</span>`;
+      el.innerHTML = `<ha-icon icon="${app.icon || 'mdi:application'}"${atvColorStyle(app.color)}></ha-icon><span>${app.name}</span>`;
       el.addEventListener('click', () => {
         this._call('media_player.select_source', this._entity, { source: app.package });
       });
@@ -334,6 +342,18 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
         this._emit(this._buildConfig());
       });
 
+      const colorInput = document.createElement('ha-textfield');
+      colorInput.label = 'Colour';
+      colorInput.value = app.color || '';
+      colorInput.placeholder = 'e.g. red';
+      colorInput.style.flex = '0.9';
+      colorInput.addEventListener('input', (e) => {
+        const apps = [...this._config.apps];
+        apps[idx] = { ...apps[idx], color: e.target.value };
+        this._config = { ...this._config, apps };
+        this._emit(this._buildConfig());
+      });
+
       const removeBtn = document.createElement('ha-icon-button');
       removeBtn.path = 'M19,13H5V11H19V13Z';
       removeBtn.addEventListener('click', () => {
@@ -347,6 +367,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
       row.appendChild(nameInput);
       row.appendChild(iconInput);
       row.appendChild(pkgInput);
+      row.appendChild(colorInput);
       row.appendChild(removeBtn);
       list.appendChild(row);
     });
