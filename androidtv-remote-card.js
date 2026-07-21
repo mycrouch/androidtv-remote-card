@@ -25,7 +25,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.4.0';
+const ATV_CARD_VERSION = '1.4.1';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. `package` accepts an application ID (com.foo.bar)
@@ -181,7 +181,12 @@ class AndroidTvRemoteCard extends HTMLElement {
         .atv-kbd .tile { padding: 0 14px; min-height: 46px; }
         .atv-kbd .tile ha-icon { --mdc-icon-size: 22px; }
         .atv-kbd .tile span { font-weight: 600; color: var(--primary-text-color); }
-        .atv-dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 188px; margin: 0 auto; }
+        .atv-cluster { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; margin-bottom: 14px; }
+        .atv-rocker { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .atv-rocker .tile { width: 54px; height: 54px; }
+        .atv-rocker .tile ha-icon { --mdc-icon-size: 24px; }
+        .atv-rocker .rk-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; color: var(--secondary-text-color); }
+        .atv-dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 176px; margin: 0 auto; }
         .atv-dbtn {
           display: flex; align-items: center; justify-content: center;
           aspect-ratio: 1 / 1; border-radius: 50%;
@@ -196,6 +201,7 @@ class AndroidTvRemoteCard extends HTMLElement {
         .atv-dbtn.spacer { background: none; cursor: default; }
         .atv-section-label { font-size: 0.85rem; font-weight: 500; color: var(--secondary-text-color); margin: 4px 0 8px; }
         .atv-livetv { margin-top: 14px; }
+        .atv-livetv-row { grid-template-columns: repeat(3, 1fr); }
         .atv-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
         .atv-keypad .tile { min-height: 52px; font-size: 1.1rem; font-weight: 600; color: var(--primary-text-color); }
         .atv-keypad .tile ha-icon { --mdc-icon-size: 22px; }
@@ -232,9 +238,9 @@ class AndroidTvRemoteCard extends HTMLElement {
           <div class="atv-row">
             <div class="tile" data-cmd="HOME"><ha-icon icon="mdi:home"></ha-icon><span>Home</span></div>
             <div class="tile" data-cmd="BACK"><ha-icon icon="mdi:arrow-left"></ha-icon><span>Back</span></div>
+            <div class="tile" data-cmd="TV"><ha-icon icon="mdi:television"></ha-icon><span>TV</span></div>
             <div class="tile atv-kbd-toggle"><ha-icon icon="mdi:keyboard-outline"></ha-icon><span>Keyboard</span></div>
-            <div class="tile" data-cmd="VOLUME_DOWN"><ha-icon icon="mdi:volume-minus"></ha-icon><span>Vol -</span></div>
-            <div class="tile" data-cmd="VOLUME_UP"><ha-icon icon="mdi:volume-plus"></ha-icon><span>Vol +</span></div>
+            <div class="tile" data-cmd="MUTE"><ha-icon icon="mdi:volume-mute"></ha-icon><span>Mute</span></div>
           </div>
           <div class="atv-kbd" style="display:none;">
             <input class="atv-kbd-input" type="text" placeholder="Type, then Send…" enterkeyhint="send" />
@@ -242,22 +248,32 @@ class AndroidTvRemoteCard extends HTMLElement {
             <div class="tile atv-kbd-btn" data-kbd="send" title="Type onto TV"><span>Send</span></div>
             <div class="tile atv-kbd-btn" data-kbd="enter" title="Enter"><ha-icon icon="mdi:keyboard-return"></ha-icon></div>
           </div>
-          <div class="atv-dpad">
-            <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-cmd="DPAD_UP"><ha-icon icon="mdi:chevron-up"></ha-icon></div>
-            <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-cmd="DPAD_LEFT"><ha-icon icon="mdi:chevron-left"></ha-icon></div>
-            <div class="atv-dbtn ok" data-cmd="DPAD_CENTER"><span>OK</span></div>
-            <div class="atv-dbtn" data-cmd="DPAD_RIGHT"><ha-icon icon="mdi:chevron-right"></ha-icon></div>
-            <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-cmd="DPAD_DOWN"><ha-icon icon="mdi:chevron-down"></ha-icon></div>
-            <div class="atv-dbtn spacer"></div>
+          <div class="atv-cluster">
+            <div class="atv-rocker">
+              <div class="tile rk" data-cmd="CHANNEL_UP"><ha-icon icon="mdi:plus"></ha-icon></div>
+              <div class="rk-label">CH</div>
+              <div class="tile rk" data-cmd="CHANNEL_DOWN"><ha-icon icon="mdi:minus"></ha-icon></div>
+            </div>
+            <div class="atv-dpad">
+              <div class="atv-dbtn spacer"></div>
+              <div class="atv-dbtn" data-cmd="DPAD_UP"><ha-icon icon="mdi:chevron-up"></ha-icon></div>
+              <div class="atv-dbtn spacer"></div>
+              <div class="atv-dbtn" data-cmd="DPAD_LEFT"><ha-icon icon="mdi:chevron-left"></ha-icon></div>
+              <div class="atv-dbtn ok" data-cmd="DPAD_CENTER"><span>OK</span></div>
+              <div class="atv-dbtn" data-cmd="DPAD_RIGHT"><ha-icon icon="mdi:chevron-right"></ha-icon></div>
+              <div class="atv-dbtn spacer"></div>
+              <div class="atv-dbtn" data-cmd="DPAD_DOWN"><ha-icon icon="mdi:chevron-down"></ha-icon></div>
+              <div class="atv-dbtn spacer"></div>
+            </div>
+            <div class="atv-rocker">
+              <div class="tile rk" data-cmd="VOLUME_UP"><ha-icon icon="mdi:plus"></ha-icon></div>
+              <div class="rk-label">VOL</div>
+              <div class="tile rk" data-cmd="VOLUME_DOWN"><ha-icon icon="mdi:minus"></ha-icon></div>
+            </div>
           </div>
           <div class="atv-livetv">
             <div class="atv-section-label">Live TV</div>
-            <div class="atv-row">
-              <div class="tile" data-cmd="CHANNEL_DOWN"><ha-icon icon="mdi:chevron-down"></ha-icon><span>Ch -</span></div>
-              <div class="tile" data-cmd="CHANNEL_UP"><ha-icon icon="mdi:chevron-up"></ha-icon><span>Ch +</span></div>
+            <div class="atv-row atv-livetv-row">
               <div class="tile" data-cmd="GUIDE"><ha-icon icon="mdi:television-guide"></ha-icon><span>Guide</span></div>
               <div class="tile" data-cmd="INFO"><ha-icon icon="mdi:information-outline"></ha-icon><span>Info</span></div>
               <div class="tile atv-keypad-toggle"><ha-icon icon="mdi:dialpad"></ha-icon><span>Keypad</span></div>
