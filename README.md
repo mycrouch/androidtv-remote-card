@@ -30,7 +30,9 @@ The resource is served at `/hacsfiles/androidtv-remote-card/androidtv-remote-car
 | `name`   | no       | Card title override                                 |
 | `apps`   | no       | List of `{ name, icon, package, color }` app shortcuts |
 
-Each app's `color` is an optional Home Assistant named palette colour (`red`, `light-blue`, `orange`, `cyan`, `green`, `grey`, …), rendered through the theme's `--rgb-<name>` tokens so it stays consistent with your theme. Omit it for the default icon colour.
+Each app's `color` is an optional Home Assistant named palette colour (`red`, `light-blue`, `orange`, `cyan`, `green`, `grey`, …), rendered through the theme's `--<name>-color` tokens so it stays consistent with your theme. Omit it for the default icon colour.
+
+Apps launch via `media_player.play_media` on the `androidtv_remote` entity. Set `package` to either an **application ID** (e.g. `com.netflix.ninja` — launched as `media_content_type: app`) or a **deep link** containing `://` (e.g. `netflix://`, `https://www.youtube.com` — launched as `media_content_type: url`). Nav and volume buttons use `remote.send_command` on the `remote` entity.
 
 ### Example
 

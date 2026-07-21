@@ -5,9 +5,9 @@
  * One-card remote control + app launcher for a single Android TV / Google TV
  * connected via the androidtv_remote integration. Power, D-pad-style nav,
  * volume, and a GUI-editable grid of app shortcuts (Netflix, Prime Video,
- * Plex, whatever's installed) that launch by Android package name via
- * media_player.select_source. The currently-foregrounded app (from the
- * media_player's app_id attribute) is highlighted live.
+ * Plex, whatever's installed) that launch by Android application ID (or a
+ * deep link) via media_player.play_media. The currently-foregrounded app
+ * (from the media_player's app_id attribute) is highlighted live.
  *
  * Companion card to heos-multiroom-card — same house style (Mushroom-ish
  * flat card, tinted background support, GUI editor, no YAML required).
@@ -15,7 +15,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.1.2';
+const ATV_CARD_VERSION = '1.1.3';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. Package names are the real, verified IDs for
@@ -206,7 +206,15 @@ class AndroidTvRemoteCard extends HTMLElement {
       el.dataset.package = app.package;
       el.innerHTML = `<ha-icon icon="${app.icon || 'mdi:application'}"${atvColorStyle(app.color)}></ha-icon><span>${app.name}</span>`;
       el.addEventListener('click', () => {
-        this._call('media_player.select_source', this._entity, { source: app.package });
+        const id = app.package || '';
+        // androidtv_remote launches apps via media_player.play_media:
+        //   media_content_type "app"  -> an application ID (package name)
+        //   media_content_type "url"  -> a deep link (contains "://")
+        const isLink = id.includes('://');
+        this._call('media_player.play_media', this._entity, {
+          media_content_type: isLink ? 'url' : 'app',
+          media_content_id: id,
+        });
       });
       this._appsEl.appendChild(el);
     });
