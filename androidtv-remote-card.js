@@ -21,7 +21,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.3.0';
+const ATV_CARD_VERSION = '1.3.1';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. `package` accepts an application ID (com.foo.bar)
@@ -117,6 +117,7 @@ class AndroidTvRemoteCard extends HTMLElement {
     root.innerHTML = `
       <style>
         :host { display: block; }
+        .atv-card, .atv-card * { box-sizing: border-box; }
         .atv-card { padding: 16px; }
         .atv-header {
           display: flex; align-items: baseline; gap: 6px;
@@ -142,15 +143,13 @@ class AndroidTvRemoteCard extends HTMLElement {
         .tile ha-icon { color: var(--state-icon-color, var(--paper-item-icon-color)); }
         .atv-powerbar { margin-bottom: 14px; }
         .atv-power {
-          width: 100%; padding: 12px; min-height: 52px; font-weight: 600;
+          width: 100%; padding: 10px 12px; min-height: 46px; font-weight: 600;
         }
-        .atv-power ha-icon { --mdc-icon-size: 24px; color: var(--state-icon-color, var(--paper-item-icon-color)); }
+        .atv-power ha-icon { --mdc-icon-size: 22px; color: var(--state-icon-color, var(--paper-item-icon-color)); }
         .atv-power span { color: var(--primary-text-color); }
+        /* "On" is signalled quietly: red power icon + a subtle accent border. */
         .atv-power.on ha-icon { color: var(--error-color, #db4437); }
-        .atv-power.on {
-          background: color-mix(in srgb, var(--error-color, #db4437) 10%, var(--card-background-color, #fff));
-          border-color: color-mix(in srgb, var(--error-color, #db4437) 35%, var(--divider-color, #e0e0e0));
-        }
+        .atv-power.on { border-color: color-mix(in srgb, var(--error-color, #db4437) 45%, var(--divider-color, #e0e0e0)); }
         .atv-controls { margin-bottom: 14px; }
         .atv-row {
           display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px;
@@ -159,8 +158,8 @@ class AndroidTvRemoteCard extends HTMLElement {
         .atv-row .tile ha-icon { --mdc-icon-size: 22px; }
         .atv-row .tile span { font-size: 0.78rem; font-weight: 500; color: var(--primary-text-color); }
         .atv-dpad {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-          width: 210px; margin: 0 auto;
+          display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+          width: 188px; margin: 0 auto;
         }
         .atv-dbtn {
           display: flex; align-items: center; justify-content: center;
