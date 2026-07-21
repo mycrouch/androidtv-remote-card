@@ -6,8 +6,9 @@
 
 One-card remote control + app launcher for a single Android TV / Google TV connected to Home Assistant via the **androidtv_remote** integration.
 
-- Power, Home, Back, Volume −/+ in a single row
-- A **D-pad** (up/down/left/right/OK) for on-screen navigation via `remote.send_command` (shown when a `remote` entity is set; toggle with `dpad`)
+- **Collapses to Power + apps when the TV is off**, and auto-expands to the full remote when it's on — with a chevron to expand/collapse manually anytime (`collapsible`, on by default)
+- **Tap an app to power on and launch it** in one press (tap Power to just toggle the TV)
+- Full remote when expanded: **Home, Back, Search** (opens the TV's on-screen keyboard), **Volume −/+**, and a **D-pad** (up/down/left/right/OK) via `remote.send_command` (`dpad`, on by default)
 - **Reactive power button** — lit red when the TV is on, muted when off
 - GUI-editable grid of app shortcuts (Netflix, Prime Video, Plex, YouTube, Disney+, Apple TV, Spotify, or anything installed) that launch via `media_player.play_media`
 - The currently-foregrounded app (from the media_player's `app_id` attribute) is highlighted live
@@ -30,6 +31,7 @@ The resource is served at `/hacsfiles/androidtv-remote-card/androidtv-remote-car
 | `entity` | yes      | The TV `media_player` entity                        |
 | `remote` | no       | The `remote.` entity, for nav/volume/D-pad commands  |
 | `name`   | no       | Card title override                                 |
+| `collapsible` | no  | Collapse to Power + apps when the TV is off; auto-expand when on (default `true`) |
 | `dpad`   | no       | Show the D-pad (default `true` when `remote` is set) |
 | `apps`   | no       | List of `{ name, icon, package, color }` app shortcuts |
 
