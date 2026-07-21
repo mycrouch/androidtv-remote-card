@@ -15,7 +15,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.1.0';
+const ATV_CARD_VERSION = '1.1.1';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. Package names are the real, verified IDs for
@@ -32,12 +32,17 @@ const ATV_COMMON_APPS = [
   { name: 'Spotify', icon: 'mdi:spotify', package: 'com.spotify.tv.android', color: 'green' },
 ];
 
-// Only allow safe palette-name characters when interpolating into a CSS
-// custom-property name, so a stray config value can't break out of the rule.
+// Named palette colours resolve to Home Assistant's core theme tokens,
+// which are `--<name>-color` (e.g. --red-color, --light-blue-color). Only
+// allow safe characters when interpolating into the custom-property name so
+// a stray config value can't break out of the rule. A hex/rgb value is
+// passed through verbatim.
 function atvColorStyle(color) {
   if (!color) return '';
-  const safe = String(color).replace(/[^a-z0-9-]/gi, '');
-  return safe ? ` style="color: rgb(var(--rgb-${safe}))"` : '';
+  const raw = String(color).trim();
+  if (/^(#|rgb|hsl|var\()/i.test(raw)) return ` style="color: ${raw.replace(/"/g, '')}"`;
+  const safe = raw.replace(/[^a-z0-9-]/gi, '');
+  return safe ? ` style="color: var(--${safe}-color)"` : '';
 }
 
 class AndroidTvRemoteCard extends HTMLElement {
