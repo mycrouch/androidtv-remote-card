@@ -1,5 +1,5 @@
 /*
- * Android TV Remote Card v1.3.0
+ * Android TV Remote Card v1.4.0
  * https://github.com/mycrouch/androidtv-remote-card
  *
  * One-card remote control + app launcher for a single Android TV / Google TV
@@ -9,9 +9,13 @@
  *   - tapping an app powers the TV on (if off) and launches the app
  *   - tapping Power toggles the TV on/off
  * When the TV is on the card auto-expands to the full remote (Home, Back,
- * Search/keyboard, volume and a D-pad); a chevron lets you expand/collapse
- * manually at any time. Apps launch by application ID or deep link via
- * media_player.play_media; nav/volume/search use remote.send_command. The
+ * Keyboard, volume, D-pad, and an optional Live TV section); a chevron lets
+ * you expand/collapse manually at any time.
+ *
+ * Apps launch by application ID or deep link via media_player.play_media.
+ * Nav / volume / channels / on-screen typing all go through
+ * remote.send_command. The Keyboard button types into whatever field is
+ * focused on the TV (needs "Enable IME" in the integration options). The
  * currently-foregrounded app (media_player app_id) is highlighted live, and
  * the Power button lights when the TV is on.
  *
@@ -21,7 +25,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.3.1';
+const ATV_CARD_VERSION = '1.4.0';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. `package` accepts an application ID (com.foo.bar)
@@ -81,13 +85,19 @@ class AndroidTvRemoteCard extends HTMLElement {
     this._apps = Array.isArray(config.apps) ? config.apps : [];
     this._name = config.name || '';
     this._dpad = config.dpad !== false; // on by default (needs a remote entity)
+    this._livetv = config.livetv === true; // off by default
     this._collapsible = config.collapsible !== false; // on by default
     this._built = false;
     this._lastOn = undefined;
   }
 
   getCardSize() {
-    const controls = this._remote ? (this._dpad ? 4 : 1) : 0;
+    let controls = 0;
+    if (this._remote) {
+      controls += 1; // nav row
+      if (this._dpad) controls += 3;
+      if (this._livetv) controls += 2;
+    }
     return 3 + controls + Math.ceil(this._apps.length / 3);
   }
 
@@ -104,6 +114,14 @@ class AndroidTvRemoteCard extends HTMLElement {
     if (!entityId) return;
     const [domain, svc] = service.split('.');
     this._hass.callService(domain, svc, { entity_id: entityId, ...data });
+  }
+
+  _send(command) {
+    if (this._remote && command) this._call('remote.send_command', this._remote, { command });
+  }
+
+  _sendText(text) {
+    if (this._remote && text) this._call('remote.send_command', this._remote, { command: `text:${text}` });
   }
 
   _isOn() {
@@ -142,25 +160,28 @@ class AndroidTvRemoteCard extends HTMLElement {
         .tile:active { background: var(--divider-color, #e0e0e0); }
         .tile ha-icon { color: var(--state-icon-color, var(--paper-item-icon-color)); }
         .atv-powerbar { margin-bottom: 14px; }
-        .atv-power {
-          width: 100%; padding: 10px 12px; min-height: 46px; font-weight: 600;
-        }
+        .atv-power { width: 100%; padding: 10px 12px; min-height: 46px; font-weight: 600; }
         .atv-power ha-icon { --mdc-icon-size: 22px; color: var(--state-icon-color, var(--paper-item-icon-color)); }
         .atv-power span { color: var(--primary-text-color); }
-        /* "On" is signalled quietly: red power icon + a subtle accent border. */
         .atv-power.on ha-icon { color: var(--error-color, #db4437); }
         .atv-power.on { border-color: color-mix(in srgb, var(--error-color, #db4437) 45%, var(--divider-color, #e0e0e0)); }
         .atv-controls { margin-bottom: 14px; }
-        .atv-row {
-          display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px;
-        }
+        .atv-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
         .atv-row .tile { flex-direction: column; padding: 10px 4px; min-height: 64px; }
         .atv-row .tile ha-icon { --mdc-icon-size: 22px; }
         .atv-row .tile span { font-size: 0.78rem; font-weight: 500; color: var(--primary-text-color); }
-        .atv-dpad {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-          width: 188px; margin: 0 auto;
+        .atv-kbd { display: flex; gap: 8px; align-items: stretch; margin-bottom: 14px; }
+        .atv-kbd-input {
+          flex: 1 1 auto; min-width: 0; min-height: 46px; padding: 0 12px;
+          border: 1px solid var(--divider-color, #e0e0e0); border-radius: 12px;
+          background: var(--card-background-color, #fff); color: var(--primary-text-color);
+          font: inherit; font-size: 0.95rem;
         }
+        .atv-kbd-input:focus { outline: none; border-color: var(--primary-color, #03a9f4); }
+        .atv-kbd .tile { padding: 0 14px; min-height: 46px; }
+        .atv-kbd .tile ha-icon { --mdc-icon-size: 22px; }
+        .atv-kbd .tile span { font-weight: 600; color: var(--primary-text-color); }
+        .atv-dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 188px; margin: 0 auto; }
         .atv-dbtn {
           display: flex; align-items: center; justify-content: center;
           aspect-ratio: 1 / 1; border-radius: 50%;
@@ -173,7 +194,11 @@ class AndroidTvRemoteCard extends HTMLElement {
         .atv-dbtn.ok { background: var(--primary-color, #03a9f4); }
         .atv-dbtn.ok span { color: var(--text-primary-color, #fff); font-weight: 600; font-size: 0.9rem; }
         .atv-dbtn.spacer { background: none; cursor: default; }
-        .atv-apps-label { font-size: 0.85rem; font-weight: 500; color: var(--secondary-text-color); margin: 4px 0 8px; }
+        .atv-section-label { font-size: 0.85rem; font-weight: 500; color: var(--secondary-text-color); margin: 4px 0 8px; }
+        .atv-livetv { margin-top: 14px; }
+        .atv-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .atv-keypad .tile { min-height: 52px; font-size: 1.1rem; font-weight: 600; color: var(--primary-text-color); }
+        .atv-keypad .tile ha-icon { --mdc-icon-size: 22px; }
         .atv-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .atv-app {
           display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -205,25 +230,55 @@ class AndroidTvRemoteCard extends HTMLElement {
         </div>
         <div class="atv-controls">
           <div class="atv-row">
-            <div class="tile" data-action="home"><ha-icon icon="mdi:home"></ha-icon><span>Home</span></div>
-            <div class="tile" data-action="back"><ha-icon icon="mdi:arrow-left"></ha-icon><span>Back</span></div>
-            <div class="tile" data-action="search"><ha-icon icon="mdi:magnify"></ha-icon><span>Search</span></div>
-            <div class="tile" data-action="vol_down"><ha-icon icon="mdi:volume-minus"></ha-icon><span>Vol -</span></div>
-            <div class="tile" data-action="vol_up"><ha-icon icon="mdi:volume-plus"></ha-icon><span>Vol +</span></div>
+            <div class="tile" data-cmd="HOME"><ha-icon icon="mdi:home"></ha-icon><span>Home</span></div>
+            <div class="tile" data-cmd="BACK"><ha-icon icon="mdi:arrow-left"></ha-icon><span>Back</span></div>
+            <div class="tile atv-kbd-toggle"><ha-icon icon="mdi:keyboard-outline"></ha-icon><span>Keyboard</span></div>
+            <div class="tile" data-cmd="VOLUME_DOWN"><ha-icon icon="mdi:volume-minus"></ha-icon><span>Vol -</span></div>
+            <div class="tile" data-cmd="VOLUME_UP"><ha-icon icon="mdi:volume-plus"></ha-icon><span>Vol +</span></div>
+          </div>
+          <div class="atv-kbd" style="display:none;">
+            <input class="atv-kbd-input" type="text" placeholder="Type, then Send…" enterkeyhint="send" />
+            <div class="tile atv-kbd-btn" data-kbd="del" title="Backspace"><ha-icon icon="mdi:backspace-outline"></ha-icon></div>
+            <div class="tile atv-kbd-btn" data-kbd="send" title="Type onto TV"><span>Send</span></div>
+            <div class="tile atv-kbd-btn" data-kbd="enter" title="Enter"><ha-icon icon="mdi:keyboard-return"></ha-icon></div>
           </div>
           <div class="atv-dpad">
             <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-nav="up"><ha-icon icon="mdi:chevron-up"></ha-icon></div>
+            <div class="atv-dbtn" data-cmd="DPAD_UP"><ha-icon icon="mdi:chevron-up"></ha-icon></div>
             <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-nav="left"><ha-icon icon="mdi:chevron-left"></ha-icon></div>
-            <div class="atv-dbtn ok" data-nav="ok"><span>OK</span></div>
-            <div class="atv-dbtn" data-nav="right"><ha-icon icon="mdi:chevron-right"></ha-icon></div>
+            <div class="atv-dbtn" data-cmd="DPAD_LEFT"><ha-icon icon="mdi:chevron-left"></ha-icon></div>
+            <div class="atv-dbtn ok" data-cmd="DPAD_CENTER"><span>OK</span></div>
+            <div class="atv-dbtn" data-cmd="DPAD_RIGHT"><ha-icon icon="mdi:chevron-right"></ha-icon></div>
             <div class="atv-dbtn spacer"></div>
-            <div class="atv-dbtn" data-nav="down"><ha-icon icon="mdi:chevron-down"></ha-icon></div>
+            <div class="atv-dbtn" data-cmd="DPAD_DOWN"><ha-icon icon="mdi:chevron-down"></ha-icon></div>
             <div class="atv-dbtn spacer"></div>
           </div>
+          <div class="atv-livetv">
+            <div class="atv-section-label">Live TV</div>
+            <div class="atv-row">
+              <div class="tile" data-cmd="CHANNEL_DOWN"><ha-icon icon="mdi:chevron-down"></ha-icon><span>Ch -</span></div>
+              <div class="tile" data-cmd="CHANNEL_UP"><ha-icon icon="mdi:chevron-up"></ha-icon><span>Ch +</span></div>
+              <div class="tile" data-cmd="GUIDE"><ha-icon icon="mdi:television-guide"></ha-icon><span>Guide</span></div>
+              <div class="tile" data-cmd="INFO"><ha-icon icon="mdi:information-outline"></ha-icon><span>Info</span></div>
+              <div class="tile atv-keypad-toggle"><ha-icon icon="mdi:dialpad"></ha-icon><span>Keypad</span></div>
+            </div>
+            <div class="atv-keypad" style="display:none;">
+              <div class="tile" data-cmd="1"><span>1</span></div>
+              <div class="tile" data-cmd="2"><span>2</span></div>
+              <div class="tile" data-cmd="3"><span>3</span></div>
+              <div class="tile" data-cmd="4"><span>4</span></div>
+              <div class="tile" data-cmd="5"><span>5</span></div>
+              <div class="tile" data-cmd="6"><span>6</span></div>
+              <div class="tile" data-cmd="7"><span>7</span></div>
+              <div class="tile" data-cmd="8"><span>8</span></div>
+              <div class="tile" data-cmd="9"><span>9</span></div>
+              <div class="tile" data-cmd="DEL"><ha-icon icon="mdi:backspace-outline"></ha-icon></div>
+              <div class="tile" data-cmd="0"><span>0</span></div>
+              <div class="tile" data-cmd="ENTER"><ha-icon icon="mdi:keyboard-return"></ha-icon></div>
+            </div>
+          </div>
         </div>
-        <div class="atv-apps-label">Apps</div>
+        <div class="atv-section-label">Apps</div>
         <div class="atv-apps"></div>
         <div class="atv-empty" style="display:none;">No apps configured — add some in the card editor.</div>
       </div>
@@ -241,40 +296,70 @@ class AndroidTvRemoteCard extends HTMLElement {
     this._appsEl = root.querySelector('.atv-apps');
     this._emptyEl = root.querySelector('.atv-empty');
 
-    // Power tile
     this._powerBtn.addEventListener('click', () => this._onButton('power'));
 
-    // Expandable controls only exist when there is a remote entity.
     if (!hasControls) {
       this._controlsEl.remove();
       this._controlsEl = null;
       this._chevronEl.remove();
       this._chevronEl = null;
     } else {
-      this._controlsEl.querySelectorAll('.atv-row .tile').forEach((btn) => {
-        btn.addEventListener('click', () => this._onButton(btn.dataset.action));
+      // Every button that maps to a raw remote command.
+      this._controlsEl.querySelectorAll('[data-cmd]').forEach((btn) => {
+        btn.addEventListener('click', () => this._send(btn.dataset.cmd));
       });
+
+      // Keyboard panel.
+      const kbdToggle = this._controlsEl.querySelector('.atv-kbd-toggle');
+      const kbdPanel = this._controlsEl.querySelector('.atv-kbd');
+      const kbdInput = this._controlsEl.querySelector('.atv-kbd-input');
+      kbdToggle.addEventListener('click', () => {
+        const show = kbdPanel.style.display === 'none';
+        kbdPanel.style.display = show ? '' : 'none';
+        if (show) kbdInput.focus();
+      });
+      const sendText = () => {
+        this._sendText(kbdInput.value);
+        kbdInput.value = '';
+        kbdInput.focus();
+      };
+      this._controlsEl.querySelector('[data-kbd="send"]').addEventListener('click', sendText);
+      this._controlsEl.querySelector('[data-kbd="del"]').addEventListener('click', () => this._send('DEL'));
+      this._controlsEl.querySelector('[data-kbd="enter"]').addEventListener('click', () => this._send('ENTER'));
+      kbdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendText();
+        }
+      });
+
+      // D-pad on/off.
       const dpadEl = this._controlsEl.querySelector('.atv-dpad');
-      if (dpadEl && !this._dpad) {
-        dpadEl.remove();
-      } else if (dpadEl) {
-        dpadEl.querySelectorAll('.atv-dbtn[data-nav]').forEach((btn) => {
-          btn.addEventListener('click', () => this._onNav(btn.dataset.nav));
+      if (dpadEl && !this._dpad) dpadEl.remove();
+
+      // Live TV section on/off + keypad toggle.
+      const liveEl = this._controlsEl.querySelector('.atv-livetv');
+      if (liveEl && !this._livetv) {
+        liveEl.remove();
+      } else if (liveEl) {
+        const keypadToggle = liveEl.querySelector('.atv-keypad-toggle');
+        const keypad = liveEl.querySelector('.atv-keypad');
+        keypadToggle.addEventListener('click', () => {
+          keypad.style.display = keypad.style.display === 'none' ? '' : 'none';
         });
       }
+
       if (this._collapsible) {
         this._chevronEl.addEventListener('click', () => {
           this._expanded = !this._expanded;
           this._applyExpanded();
         });
       } else {
-        // Not collapsible: always show controls, no chevron.
         this._chevronEl.remove();
         this._chevronEl = null;
       }
     }
 
-    // Initial expanded state.
     this._expanded = this._collapsible && this._controlsEl ? this._isOn() : true;
     this._applyExpanded();
 
@@ -292,31 +377,7 @@ class AndroidTvRemoteCard extends HTMLElement {
   _onButton(action) {
     if (action === 'power') {
       this._call('media_player.toggle', this._entity, {});
-      return;
     }
-    if (!this._remote) return;
-    const commandMap = {
-      home: 'HOME',
-      back: 'BACK',
-      search: 'SEARCH',
-      vol_down: 'VOLUME_DOWN',
-      vol_up: 'VOLUME_UP',
-    };
-    const command = commandMap[action];
-    if (command) this._call('remote.send_command', this._remote, { command });
-  }
-
-  _onNav(nav) {
-    if (!this._remote) return;
-    const navMap = {
-      up: 'DPAD_UP',
-      down: 'DPAD_DOWN',
-      left: 'DPAD_LEFT',
-      right: 'DPAD_RIGHT',
-      ok: 'DPAD_CENTER',
-    };
-    const command = navMap[nav];
-    if (command) this._call('remote.send_command', this._remote, { command });
   }
 
   _launchApp(app) {
@@ -331,7 +392,6 @@ class AndroidTvRemoteCard extends HTMLElement {
     if (this._isOn()) {
       doLaunch();
     } else {
-      // Power on first, then launch once the TV has had a moment to wake.
       this._call('media_player.turn_on', this._entity, {});
       setTimeout(doLaunch, 2000);
     }
@@ -360,13 +420,8 @@ class AndroidTvRemoteCard extends HTMLElement {
     const isOn = this._isOn();
     if (this._powerBtn) this._powerBtn.classList.toggle('on', isOn);
 
-    // Auto expand/collapse on power transitions (manual chevron overrides until
-    // the next transition).
     if (this._collapsible && this._controlsEl) {
-      if (this._lastOn === undefined) {
-        this._expanded = isOn;
-        this._applyExpanded();
-      } else if (isOn !== this._lastOn) {
+      if (this._lastOn === undefined || isOn !== this._lastOn) {
         this._expanded = isOn;
         this._applyExpanded();
       }
@@ -425,8 +480,9 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
     };
     if (this._config.remote) config.remote = this._config.remote;
     if (this._config.name) config.name = this._config.name;
-    if (this._config.dpad === false) config.dpad = false;
     if (this._config.collapsible === false) config.collapsible = false;
+    if (this._config.dpad === false) config.dpad = false;
+    if (this._config.livetv === true) config.livetv = true;
     if (this._config.apps && this._config.apps.length) config.apps = this._config.apps;
     return config;
   }
@@ -438,6 +494,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
       { name: 'name', selector: { text: {} }, label: 'Card title (optional)' },
       { name: 'collapsible', selector: { boolean: {} }, label: 'Collapse to Power + apps when TV is off' },
       { name: 'dpad', selector: { boolean: {} }, label: 'Show D-pad (needs remote entity)' },
+      { name: 'livetv', selector: { boolean: {} }, label: 'Show Live TV controls (channel, guide, keypad)' },
     ];
   }
 
@@ -456,6 +513,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
       name: this._config.name || '',
       collapsible: this._config.collapsible !== false,
       dpad: this._config.dpad !== false,
+      livetv: this._config.livetv === true,
     };
     this._form.computeLabel = (s) => s.label || s.name;
     this._form.addEventListener('value-changed', (ev) => {
@@ -589,7 +647,7 @@ window.customCards.push({
   preview: true,
   documentationURL: 'https://github.com/mycrouch/androidtv-remote-card',
   description:
-    'Collapsible one-card remote + app launcher for a single Android TV / Google TV (androidtv_remote): power + app tiles when off, full remote (Home, Back, Search, volume, D-pad) when on, with GUI-editable coloured app shortcuts.',
+    'Collapsible one-card remote + app launcher for a single Android TV / Google TV (androidtv_remote): power + app tiles when off, full remote (Home, Back, keyboard, volume, D-pad, optional Live TV) when on, with GUI-editable coloured app shortcuts.',
 });
 
 console.info(
