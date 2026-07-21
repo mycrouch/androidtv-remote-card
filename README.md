@@ -1,14 +1,14 @@
 # Android TV Remote Card
 
 <p align="center">
-  <img src="docs/preview.png" alt="Android TV Remote Card" width="420" />
+  <img src="docs/preview.png" alt="Android TV Remote Card" width="340" />
 </p>
 
 One-card remote control + app launcher for a single Android TV / Google TV connected to Home Assistant via the **androidtv_remote** integration.
 
 - **Collapses to Power + apps when the TV is off**, and auto-expands to the full remote when it's on — with a chevron to expand/collapse manually anytime (`collapsible`, on by default)
 - **Tap an app to power on and launch it** in one press (tap Power to just toggle the TV)
-- Full remote when expanded: **Home, Back, Volume −/+**, and a **D-pad** (up/down/left/right/OK) via `remote.send_command` (`dpad`, on by default)
+- Full remote when expanded — laid out like a real remote: **Home, Back, TV, Mute** on top, a **D-pad** (up/down/left/right/OK) flanked by a **channel rocker** (left) and **volume rocker** (right), all via `remote.send_command` (`dpad`, on by default)
 - **Keyboard** button — opens a text box; what you type is sent onto the TV's focused field (in-app search etc.) via `remote.send_command` `text:`, with Backspace and Enter. Requires **Enable IME** in the integration options
 - Optional **Live TV** section (`livetv`) — Channel ±, Guide, Info and a number keypad for direct channel entry
 - **Reactive power button** — lit red when the TV is on, muted when off
@@ -18,10 +18,10 @@ One-card remote control + app launcher for a single Android TV / Google TV conne
 
 Companion card to [heos-multiroom-card](https://github.com/mycrouch/heos-multiroom-card).
 
-With the Keyboard panel open and Live TV enabled:
+When the TV is off, the card collapses to just Power and your app tiles:
 
 <p align="center">
-  <img src="docs/preview-full.png" alt="Android TV Remote Card — full remote with keyboard and Live TV" width="300" />
+  <img src="docs/preview-collapsed.png" alt="Android TV Remote Card — collapsed when the TV is off" width="300" />
 </p>
 
 ## Installation (HACS)
