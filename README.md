@@ -7,7 +7,9 @@
 One-card remote control + app launcher for a single Android TV / Google TV connected to Home Assistant via the **androidtv_remote** integration.
 
 - Power, Home, Back, Volume −/+ in a single row
-- GUI-editable grid of app shortcuts (Netflix, Prime Video, Plex, YouTube, Disney+, Apple TV, Spotify, or anything installed) that launch by Android package name via `media_player.select_source`
+- A **D-pad** (up/down/left/right/OK) for on-screen navigation via `remote.send_command` (shown when a `remote` entity is set; toggle with `dpad`)
+- **Reactive power button** — lit red when the TV is on, muted when off
+- GUI-editable grid of app shortcuts (Netflix, Prime Video, Plex, YouTube, Disney+, Apple TV, Spotify, or anything installed) that launch via `media_player.play_media`
 - The currently-foregrounded app (from the media_player's `app_id` attribute) is highlighted live
 - Mushroom-ish flat card style, full GUI editor, no YAML required
 
@@ -26,8 +28,9 @@ The resource is served at `/hacsfiles/androidtv-remote-card/androidtv-remote-car
 | Option   | Required | Description                                         |
 | -------- | -------- | --------------------------------------------------- |
 | `entity` | yes      | The TV `media_player` entity                        |
-| `remote` | no       | The `remote.` entity, for nav/volume commands       |
+| `remote` | no       | The `remote.` entity, for nav/volume/D-pad commands  |
 | `name`   | no       | Card title override                                 |
+| `dpad`   | no       | Show the D-pad (default `true` when `remote` is set) |
 | `apps`   | no       | List of `{ name, icon, package, color }` app shortcuts |
 
 Each app's `color` is an optional Home Assistant named palette colour (`red`, `light-blue`, `orange`, `cyan`, `green`, `grey`, …), rendered through the theme's `--<name>-color` tokens so it stays consistent with your theme. Omit it for the default icon colour.

@@ -15,7 +15,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.1.3';
+const ATV_CARD_VERSION = '1.2.0';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. Package names are the real, verified IDs for
@@ -23,12 +23,16 @@ const ATV_CARD_VERSION = '1.1.3';
 // Assistant named palette colour (red, light-blue, orange, cyan, grey, …),
 // rendered via the theme's --rgb-<name> tokens so it stays theme-consistent.
 const ATV_COMMON_APPS = [
+  // `package` accepts an application ID (com.foo.bar) or a deep link (contains
+  // "://"). A couple of apps don't resolve a launch intent from their package
+  // on many devices (they open the Play Store page instead), so they default
+  // to deep links here.
   { name: 'Netflix', icon: 'mdi:netflix', package: 'com.netflix.ninja', color: 'red' },
-  { name: 'Prime Video', icon: 'mdi:filmstrip', package: 'com.amazon.amazonvideo.livingroom', color: 'light-blue' },
+  { name: 'Prime Video', icon: 'mdi:filmstrip', package: 'https://app.primevideo.com', color: 'light-blue' },
   { name: 'Plex', icon: 'mdi:plex', package: 'com.plexapp.android', color: 'orange' },
   { name: 'YouTube', icon: 'mdi:youtube', package: 'com.google.android.youtube.tv', color: 'red' },
-  { name: 'Disney+', icon: 'mdi:plus-circle', package: 'com.disney.disneyplus', color: 'indigo' },
-  { name: 'Apple TV', icon: 'mdi:apple', package: 'com.apple.atve.androidtv.appletv', color: 'grey' },
+  { name: 'Disney+', icon: 'mdi:plus-circle', package: 'https://www.disneyplus.com', color: 'indigo' },
+  { name: 'Apple TV', icon: 'mdi:apple', package: 'https://tv.apple.com', color: 'grey' },
   { name: 'Spotify', icon: 'mdi:spotify', package: 'com.spotify.tv.android', color: 'green' },
 ];
 
@@ -74,11 +78,12 @@ class AndroidTvRemoteCard extends HTMLElement {
     this._remote = config.remote || '';
     this._apps = Array.isArray(config.apps) ? config.apps : [];
     this._name = config.name || '';
+    this._dpad = config.dpad !== false; // on by default (needs a remote entity)
     this._built = false;
   }
 
   getCardSize() {
-    return 3 + Math.ceil(this._apps.length / 3);
+    return 3 + (this._remote && this._dpad ? 3 : 0) + Math.ceil(this._apps.length / 3);
   }
 
   set hass(hass) {
@@ -119,8 +124,30 @@ class AndroidTvRemoteCard extends HTMLElement {
         .atv-btn:hover { background: var(--secondary-background-color, #f2f2f2); }
         .atv-btn:active { background: var(--divider-color, #e0e0e0); }
         .atv-btn ha-icon { --mdc-icon-size: 22px; color: var(--state-icon-color, var(--paper-item-icon-color)); }
-        .atv-btn.power ha-icon { color: var(--error-color, #db4437); }
+        /* Power reflects the TV's state: muted when off, red + tinted when on. */
+        .atv-btn.power ha-icon { color: var(--state-icon-color, var(--paper-item-icon-color)); }
+        .atv-btn.power.on ha-icon { color: var(--error-color, #db4437); }
+        .atv-btn.power.on {
+          background: color-mix(in srgb, var(--error-color, #db4437) 10%, var(--card-background-color, #fff));
+          border-color: color-mix(in srgb, var(--error-color, #db4437) 35%, var(--divider-color, #e0e0e0));
+        }
         .atv-btn span { font-size: 0.78rem; font-weight: 500; color: var(--primary-text-color); }
+        .atv-dpad {
+          display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+          width: 210px; margin: 0 auto 16px;
+        }
+        .atv-dbtn {
+          display: flex; align-items: center; justify-content: center;
+          aspect-ratio: 1 / 1; border-radius: 50%;
+          background: var(--secondary-background-color, #f2f2f2);
+          cursor: pointer; user-select: none; transition: background 0.15s ease;
+        }
+        .atv-dbtn:hover { background: var(--divider-color, #e0e0e0); }
+        .atv-dbtn:active { background: var(--primary-color, #03a9f4); }
+        .atv-dbtn ha-icon { --mdc-icon-size: 24px; color: var(--primary-text-color); }
+        .atv-dbtn.ok { background: var(--primary-color, #03a9f4); }
+        .atv-dbtn.ok span { color: var(--text-primary-color, #fff); font-weight: 600; font-size: 0.9rem; }
+        .atv-dbtn.spacer { background: none; cursor: default; }
         .atv-apps-label { font-size: 0.85rem; font-weight: 500; color: var(--secondary-text-color); margin: 4px 0 8px; }
         .atv-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .atv-app {
@@ -162,6 +189,17 @@ class AndroidTvRemoteCard extends HTMLElement {
             <ha-icon icon="mdi:volume-plus"></ha-icon><span>Vol +</span>
           </div>
         </div>
+        <div class="atv-dpad">
+          <div class="atv-dbtn spacer"></div>
+          <div class="atv-dbtn" data-nav="up"><ha-icon icon="mdi:chevron-up"></ha-icon></div>
+          <div class="atv-dbtn spacer"></div>
+          <div class="atv-dbtn" data-nav="left"><ha-icon icon="mdi:chevron-left"></ha-icon></div>
+          <div class="atv-dbtn ok" data-nav="ok"><span>OK</span></div>
+          <div class="atv-dbtn" data-nav="right"><ha-icon icon="mdi:chevron-right"></ha-icon></div>
+          <div class="atv-dbtn spacer"></div>
+          <div class="atv-dbtn" data-nav="down"><ha-icon icon="mdi:chevron-down"></ha-icon></div>
+          <div class="atv-dbtn spacer"></div>
+        </div>
         <div class="atv-apps-label">Apps</div>
         <div class="atv-apps"></div>
         <div class="atv-empty" style="display:none;">No apps configured — add some in the card editor.</div>
@@ -177,6 +215,17 @@ class AndroidTvRemoteCard extends HTMLElement {
     this._emptyEl = root.querySelector('.atv-empty');
     this._titleEl = root.querySelector('.atv-title');
     this._subEl = root.querySelector('.atv-sub');
+    this._powerBtn = root.querySelector('.atv-btn.power');
+
+    const dpadEl = root.querySelector('.atv-dpad');
+    if (dpadEl && (!this._remote || !this._dpad)) {
+      dpadEl.remove();
+    } else if (dpadEl) {
+      dpadEl.querySelectorAll('.atv-dbtn[data-nav]').forEach((btn) => {
+        btn.addEventListener('click', () => this._onNav(btn.dataset.nav));
+      });
+    }
+
     this._renderApps();
   }
 
@@ -194,6 +243,19 @@ class AndroidTvRemoteCard extends HTMLElement {
       vol_up: 'VOLUME_UP',
     };
     this._call('remote.send_command', remote, { command: commandMap[action] });
+  }
+
+  _onNav(nav) {
+    if (!this._remote) return;
+    const navMap = {
+      up: 'DPAD_UP',
+      down: 'DPAD_DOWN',
+      left: 'DPAD_LEFT',
+      right: 'DPAD_RIGHT',
+      ok: 'DPAD_CENTER',
+    };
+    const command = navMap[nav];
+    if (command) this._call('remote.send_command', this._remote, { command });
   }
 
   _renderApps() {
@@ -225,6 +287,10 @@ class AndroidTvRemoteCard extends HTMLElement {
     if (!state) return;
     const friendly = (this._config && this._config.name) || state.attributes.friendly_name || this._entity;
     if (this._titleEl) this._titleEl.textContent = friendly;
+    if (this._powerBtn) {
+      const isOn = state.state && !['off', 'unavailable', 'standby', 'unknown'].includes(state.state);
+      this._powerBtn.classList.toggle('on', isOn);
+    }
     const appId = state.attributes.app_id || state.attributes.app_name || '';
     let appLabel = '';
     const match = this._apps.find((a) => a.package === appId);
@@ -277,6 +343,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
     };
     if (this._config.remote) config.remote = this._config.remote;
     if (this._config.name) config.name = this._config.name;
+    if (this._config.dpad === false) config.dpad = false;
     if (this._config.apps && this._config.apps.length) config.apps = this._config.apps;
     return config;
   }
@@ -286,6 +353,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
       { name: 'entity', selector: { entity: { domain: 'media_player' } }, required: true, label: 'TV (media_player)' },
       { name: 'remote', selector: { entity: { domain: 'remote' } }, label: 'Remote entity (optional, for nav/volume)' },
       { name: 'name', selector: { text: {} }, label: 'Card title (optional)' },
+      { name: 'dpad', selector: { boolean: {} }, label: 'Show D-pad (needs remote entity)' },
     ];
   }
 
@@ -302,6 +370,7 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
       entity: this._config.entity || '',
       remote: this._config.remote || '',
       name: this._config.name || '',
+      dpad: this._config.dpad !== false,
     };
     this._form.computeLabel = (s) => s.label || s.name;
     this._form.addEventListener('value-changed', (ev) => {
