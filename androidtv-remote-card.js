@@ -15,7 +15,7 @@
  * MIT License — Jason Crouch. Icons: Material Design Icons via ha-icon.
  */
 
-const ATV_CARD_VERSION = '1.1.1';
+const ATV_CARD_VERSION = '1.1.2';
 
 // A sensible default app-shortcut set, offered as a one-click "Add common
 // apps" button in the editor. Package names are the real, verified IDs for
@@ -307,60 +307,63 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
     appsHeader.style.cssText = 'font-weight:500;margin:16px 0 8px;';
     wrap.appendChild(appsHeader);
 
+    // Colour options mirror Home Assistant's named palette (rendered via
+    // --<name>-color theme tokens). custom_value allows a hex/rgb override.
+    const colorOptions = [
+      'red', 'pink', 'purple', 'deep-purple', 'indigo', 'blue', 'light-blue', 'cyan', 'teal',
+      'green', 'light-green', 'lime', 'yellow', 'amber', 'orange', 'deep-orange', 'brown', 'grey', 'blue-grey',
+    ].map((c) => ({ value: c, label: c.replace(/-/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()) }));
+
+    // Built entirely from ha-form + native buttons so it renders reliably —
+    // raw ha-textfield / mwc-button are not always registered in the editor.
+    const appSchema = [
+      {
+        name: '',
+        type: 'grid',
+        schema: [
+          { name: 'name', selector: { text: {} } },
+          { name: 'package', selector: { text: {} } },
+          { name: 'icon', selector: { icon: {} } },
+          { name: 'color', selector: { select: { mode: 'dropdown', custom_value: true, options: colorOptions } } },
+        ],
+      },
+    ];
+    const appLabels = {
+      name: 'Name',
+      package: 'Package name (e.g. com.netflix.ninja)',
+      icon: 'Icon',
+      color: 'Colour',
+    };
+
     const list = document.createElement('div');
-    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
     (this._config.apps || []).forEach((app, idx) => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+      const block = document.createElement('div');
+      block.style.cssText = 'border:1px solid var(--divider-color, #e0e0e0);border-radius:10px;padding:10px;';
 
-      const nameInput = document.createElement('ha-textfield');
-      nameInput.label = 'Name';
-      nameInput.value = app.name || '';
-      nameInput.style.flex = '1';
-      nameInput.addEventListener('input', (e) => {
+      const appForm = document.createElement('ha-form');
+      appForm.hass = this._hass;
+      appForm.schema = appSchema;
+      appForm.data = {
+        name: app.name || '',
+        package: app.package || '',
+        icon: app.icon || '',
+        color: app.color || '',
+      };
+      appForm.computeLabel = (s) => appLabels[s.name] || s.name;
+      appForm.addEventListener('value-changed', (ev) => {
         const apps = [...this._config.apps];
-        apps[idx] = { ...apps[idx], name: e.target.value };
+        apps[idx] = { ...apps[idx], ...ev.detail.value };
         this._config = { ...this._config, apps };
         this._emit(this._buildConfig());
       });
+      block.appendChild(appForm);
 
-      const iconInput = document.createElement('ha-icon-picker');
-      iconInput.label = 'Icon';
-      iconInput.value = app.icon || '';
-      iconInput.hass = this._hass;
-      iconInput.style.flex = '1';
-      iconInput.addEventListener('value-changed', (e) => {
-        const apps = [...this._config.apps];
-        apps[idx] = { ...apps[idx], icon: e.detail.value };
-        this._config = { ...this._config, apps };
-        this._emit(this._buildConfig());
-      });
-
-      const pkgInput = document.createElement('ha-textfield');
-      pkgInput.label = 'Package name';
-      pkgInput.value = app.package || '';
-      pkgInput.style.flex = '1.4';
-      pkgInput.addEventListener('input', (e) => {
-        const apps = [...this._config.apps];
-        apps[idx] = { ...apps[idx], package: e.target.value };
-        this._config = { ...this._config, apps };
-        this._emit(this._buildConfig());
-      });
-
-      const colorInput = document.createElement('ha-textfield');
-      colorInput.label = 'Colour';
-      colorInput.value = app.color || '';
-      colorInput.placeholder = 'e.g. red';
-      colorInput.style.flex = '0.9';
-      colorInput.addEventListener('input', (e) => {
-        const apps = [...this._config.apps];
-        apps[idx] = { ...apps[idx], color: e.target.value };
-        this._config = { ...this._config, apps };
-        this._emit(this._buildConfig());
-      });
-
-      const removeBtn = document.createElement('ha-icon-button');
-      removeBtn.path = 'M19,13H5V11H19V13Z';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove app';
+      removeBtn.style.cssText =
+        'margin-top:8px;background:none;border:none;color:var(--error-color, #db4437);cursor:pointer;font:inherit;padding:0;';
       removeBtn.addEventListener('click', () => {
         const apps = [...this._config.apps];
         apps.splice(idx, 1);
@@ -368,43 +371,50 @@ class AndroidTvRemoteCardEditor extends HTMLElement {
         this._emit(this._buildConfig());
         this._render();
       });
+      block.appendChild(removeBtn);
 
-      row.appendChild(nameInput);
-      row.appendChild(iconInput);
-      row.appendChild(pkgInput);
-      row.appendChild(colorInput);
-      row.appendChild(removeBtn);
-      list.appendChild(row);
+      list.appendChild(block);
     });
     wrap.appendChild(list);
 
     const addRow = document.createElement('div');
     addRow.style.cssText = 'display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;';
 
-    const addBlankBtn = document.createElement('mwc-button');
-    addBlankBtn.outlined = true;
-    addBlankBtn.textContent = '+ Add app';
-    addBlankBtn.addEventListener('click', () => {
-      const apps = [...(this._config.apps || []), { name: '', icon: 'mdi:application', package: '' }];
-      this._config = { ...this._config, apps };
-      this._emit(this._buildConfig());
-      this._render();
-    });
-    addRow.appendChild(addBlankBtn);
+    const mkButton = (label, title, handler) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      if (title) b.title = title;
+      b.style.cssText =
+        'padding:8px 14px;border:1px solid var(--primary-color, #03a9f4);border-radius:8px;' +
+        'background:none;color:var(--primary-color, #03a9f4);cursor:pointer;font:inherit;';
+      b.addEventListener('click', handler);
+      return b;
+    };
 
-    const addCommonBtn = document.createElement('mwc-button');
-    addCommonBtn.outlined = true;
-    addCommonBtn.textContent = 'Add common apps';
-    addCommonBtn.title = 'Adds Netflix, Prime Video, Plex, YouTube, Disney+, Apple TV, Spotify (skips ones already added)';
-    addCommonBtn.addEventListener('click', () => {
-      const existing = new Set((this._config.apps || []).map((a) => a.package));
-      const toAdd = ATV_COMMON_APPS.filter((a) => !existing.has(a.package));
-      const apps = [...(this._config.apps || []), ...toAdd];
-      this._config = { ...this._config, apps };
-      this._emit(this._buildConfig());
-      this._render();
-    });
-    addRow.appendChild(addCommonBtn);
+    addRow.appendChild(
+      mkButton('+ Add app', '', () => {
+        const apps = [...(this._config.apps || []), { name: '', icon: 'mdi:application', package: '', color: '' }];
+        this._config = { ...this._config, apps };
+        this._emit(this._buildConfig());
+        this._render();
+      })
+    );
+
+    addRow.appendChild(
+      mkButton(
+        'Add common apps',
+        'Adds Netflix, Prime Video, Plex, YouTube, Disney+, Apple TV, Spotify (skips ones already added)',
+        () => {
+          const existing = new Set((this._config.apps || []).map((a) => a.package));
+          const toAdd = ATV_COMMON_APPS.filter((a) => !existing.has(a.package));
+          const apps = [...(this._config.apps || []), ...toAdd];
+          this._config = { ...this._config, apps };
+          this._emit(this._buildConfig());
+          this._render();
+        }
+      )
+    );
 
     wrap.appendChild(addRow);
     this.appendChild(wrap);
